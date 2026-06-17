@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KCS CompSci Basic 64 -- Python Adventure Runner</title>
+<script src="https://skulpt.org/js/skulpt.min.js" type="text/javascript"></script>
+<script src="https://skulpt.org/js/skulpt-stdlib.js" type="text/javascript"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --beige:      #C8B89A;
+  --beige-dark: #A89070;
+  --beige-mid:  #B8A888;
+  --amber:      #FFB000;
+  --amber-dim:  #C07800;
+  --amber-glow: rgba(255,176,0,0.18);
+  --screen-bg:  #0A0600;
+  --casing:     #C4B49A;
+  --key-top:    #D4C4AA;
+  --key-shadow: #8A7A60;
+  --red-key:    #CC4422;
+  --blue-key:   #2244AA;
+}
+
+body {
+  background: #3A3028;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Courier New', Courier, monospace;
+  padding: 24px 16px;
+}
+
+/* --- MACHINE OUTER CASING --- */
+.machine {
+  width: 760px;
+  max-width: 100%;
+  background: linear-gradient(160deg, #D4C4AA 0%, #B8A888 40%, #A89070 100%);
+  border-radius: 18px 18px 12px 12px;
+  padding: 28px 32px 0 32px;
+  box-shadow:
+    0 8px 0 #7A6A50,
+    0 14px 40px rgba(0,0,0,0.6),
+    inset 0 2px 4px rgba(255,255,255,0.3),
+    inset 0 -2px 4px rgba(0,0,0,0.2);
+  position: relative;
+}
+
+/* --- BRAND STRIP --- */
+.brand-strip {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.brand-name {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: #2A1A08;
+  text-transform: uppercase;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.brand-model {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: #6A5A40;
+  text-transform: uppercase;
+}
+
+.brand-rainbow {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.brand-rainbow span {
+  width: 6px;
+  height: 22px;
+  border-radius: 1px;
+}
+
+/* --- SCREEN BEZEL --- */
+.screen-bezel {
+  background: linear-gradient(145deg, #888070 0%, #706050 50%, #887060 100%);
+  border-radius: 10px;
+  padding: 18px;
+  box-shadow:
+    inset 0 4px 12px rgba(0,0,0,0.5),
+    inset 0 -2px 6px rgba(0,0,0,0.3),
+    0 2px 0 rgba(255,255,255,0.15);
+  position: relative;
+  margin-bottom: 4px;
+}
+
+/* scanline overlay */
+.screen-bezel::after {
+  content: '';
+  position: absolute;
+  inset: 18px;
+  border-radius: 6px;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.08) 2px,
+    rgba(0,0,0,0.08) 4px
+  );
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* phosphor glow on screen edges */
+.screen-bezel::before {
+  content: '';
+  position: absolute;
+  inset: 18px;
+  border-radius: 6px;
+  box-shadow: inset 0 0 40px rgba(255,176,0,0.12);
+  pointer-events: none;
+  z-index: 11;
+}
+
+/* --- SCREEN --- */
+.screen {
+  background: var(--screen-bg);
+  border-radius: 6px;
+  height: 460px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px 14px 8px 14px;
+  position: relative;
+  scrollbar-width: thin;
+  scrollbar-color: var(--amber-dim) #1A0E00;
+}
+
+.screen::-webkit-scrollbar { width: 6px; }
+.screen::-webkit-scrollbar-track { background: #1A0E00; }
+.screen::-webkit-scrollbar-thumb { background: var(--amber-dim); border-radius: 3px; }
+
+/* boot text */
+.boot-line {
+  color: var(--amber);
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  text-shadow: 0 0 8px var(--amber), 0 0 2px var(--amber);
+  opacity: 0;
+  animation: fadeIn 0.05s forwards;
+}
+
+@keyframes fadeIn { to { opacity: 1; } }
+
+/* output lines */
+.out-line {
+  color: var(--amber);
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  text-shadow: 0 0 6px rgba(255,176,0,0.7);
+}
+
+.out-line.error-line {
+  color: #FF6644;
+  text-shadow: 0 0 6px rgba(255,100,68,0.7);
+}
+
+/* input row */
+.input-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-top: 2px;
+}
+
+.input-prompt {
+  color: var(--amber);
+  font-size: 13px;
+  text-shadow: 0 0 6px rgba(255,176,0,0.7);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.screen-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--amber);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  flex: 1;
+  caret-color: var(--amber);
+  text-shadow: 0 0 6px rgba(255,176,0,0.7);
+  padding: 0 4px;
+}
+
+/* blinking cursor for idle state */
+.cursor-blink {
+  display: inline-block;
+  width: 9px;
+  height: 14px;
+  background: var(--amber);
+  vertical-align: middle;
+  animation: blink 1s step-end infinite;
+  box-shadow: 0 0 8px var(--amber);
+  margin-left: 1px;
+}
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* --- SLOT AREA (below screen, above keyboard) --- */
+.slot-area {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 4px 6px 4px;
+}
+
+.slot-label {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: #6A5A40;
+  text-transform: uppercase;
+}
+
+.slot-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.upload-btn {
+  background: linear-gradient(180deg, #E8D8BC 0%, #C4A880 100%);
+  border: 2px solid #8A7A60;
+  border-radius: 4px;
+  padding: 5px 14px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #2A1A08;
+  cursor: pointer;
+  text-transform: uppercase;
+  box-shadow: 0 2px 0 #7A6A50, inset 0 1px 0 rgba(255,255,255,0.4);
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+
+.upload-btn:hover {
+  background: linear-gradient(180deg, #F0E0CC 0%, #D4B890 100%);
+}
+
+.upload-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 #7A6A50, inset 0 1px 0 rgba(255,255,255,0.2);
+}
+
+#file-input { display: none; }
+
+.run-btn {
+  background: linear-gradient(180deg, #55AA55 0%, #338833 100%);
+  border: 2px solid #226622;
+  border-radius: 4px;
+  padding: 5px 16px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #EEFFEE;
+  cursor: pointer;
+  text-transform: uppercase;
+  box-shadow: 0 2px 0 #1A4A1A, inset 0 1px 0 rgba(255,255,255,0.3);
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+
+.run-btn:hover { background: linear-gradient(180deg, #66BB66 0%, #449944 100%); }
+.run-btn:active { transform: translateY(2px); box-shadow: 0 0 0 #1A4A1A; }
+.run-btn:disabled { opacity: 0.4; cursor: default; transform: none; }
+
+.reset-btn {
+  background: linear-gradient(180deg, #CC5533 0%, #992211 100%);
+  border: 2px solid #661100;
+  border-radius: 4px;
+  padding: 5px 12px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #FFEEEE;
+  cursor: pointer;
+  text-transform: uppercase;
+  box-shadow: 0 2px 0 #551100, inset 0 1px 0 rgba(255,255,255,0.2);
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+
+.reset-btn:hover { background: linear-gradient(180deg, #DD6644 0%, #AA3322 100%); }
+.reset-btn:active { transform: translateY(2px); box-shadow: 0 0 0 #551100; }
+
+.filename-display {
+  font-size: 11px;
+  color: #8A7A60;
+  font-family: 'Courier New', Courier, monospace;
+  letter-spacing: 0.06em;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- KEYBOARD --- */
+.keyboard {
+  background: linear-gradient(180deg, #B8A888 0%, #A09070 100%);
+  border-radius: 0 0 10px 10px;
+  padding: 14px 10px 20px 10px;
+  margin: 0 -32px;
+  box-shadow: inset 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.key-row {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.key {
+  background: linear-gradient(180deg, var(--key-top) 0%, #B8A888 60%, #A09070 100%);
+  border: 1px solid #8A7A60;
+  border-radius: 3px;
+  height: 22px;
+  min-width: 22px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #2A1A08;
+  box-shadow: 0 2px 0 var(--key-shadow), inset 0 1px 0 rgba(255,255,255,0.5);
+  font-family: 'Courier New', Courier, monospace;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.key.wide  { min-width: 46px; }
+.key.wider { min-width: 64px; }
+.key.space { min-width: 180px; }
+
+.key.red  { background: linear-gradient(180deg, #DD5533 0%, #AA2211 100%); color: #FFEEEE; border-color: #881100; box-shadow: 0 2px 0 #661100, inset 0 1px 0 rgba(255,255,255,0.2); }
+.key.blue { background: linear-gradient(180deg, #4466CC 0%, #223388 100%); color: #EEEEFF; border-color: #112266; box-shadow: 0 2px 0 #001144, inset 0 1px 0 rgba(255,255,255,0.2); }
+.key.dark { background: linear-gradient(180deg, #8A7A60 0%, #6A5A40 100%); color: #E8D8BC; }
+
+/* --- STATUS BAR --- */
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0 8px 0;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #443830;
+  box-shadow: 0 0 0 1px #2A1A08;
+}
+
+.status-dot.active {
+  background: var(--amber);
+  box-shadow: 0 0 8px var(--amber), 0 0 2px var(--amber);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+.status-text {
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: #8A7A60;
+  text-transform: uppercase;
+}
+
+/* instruction strip */
+.instructions {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: #7A6A50;
+  text-transform: uppercase;
+  text-align: center;
+  padding-bottom: 6px;
+}
+</style>
+</head>
+<body>
+
+<div class="machine">
+
+  <!-- Brand strip -->
+  <div class="brand-strip">
+    <div>
+      <div class="brand-name">KCS CompSci Basic 64</div>
+      <div class="brand-model">Python Adventure System &mdash; v1.0</div>
+      <div style="font-size:9px;letter-spacing:0.16em;color:#8A7A60;text-transform:uppercase;margin-top:3px;">KCS Computer Department</div>
+    </div>
+    <div class="brand-rainbow">
+      <span style="background:#E63030"></span>
+      <span style="background:#E88020"></span>
+      <span style="background:#E8C820"></span>
+      <span style="background:#30A030"></span>
+      <span style="background:#2060D0"></span>
+      <span style="background:#8030C0"></span>
+    </div>
+  </div>
+
+  <!-- Screen -->
+  <div class="screen-bezel">
+    <div class="screen" id="screen">
+      <!-- content injected by JS -->
+    </div>
+  </div>
+
+  <!-- Slot area -->
+  <div class="slot-area">
+    <div class="slot-box">
+      <span class="slot-label">Program slot</span>
+      <button class="upload-btn" onclick="document.getElementById('file-input').click()">Load .py</button>
+      <input type="file" id="file-input" accept=".py" onchange="loadFile(event)">
+      <span class="filename-display" id="filename-display">-- no program loaded --</span>
+    </div>
+    <div class="slot-box">
+      <button class="run-btn" id="run-btn" onclick="runProgram()" disabled>RUN</button>
+      <button class="reset-btn" onclick="resetMachine()">RESET</button>
+    </div>
+  </div>
+
+  <!-- Status -->
+  <div class="status-bar">
+    <div style="display:flex;align-items:center;gap:6px;">
+      <div class="status-dot" id="status-dot"></div>
+      <span class="status-text" id="status-text">Ready</span>
+    </div>
+    <div class="instructions">Load a .py file &mdash; press RUN &mdash; type your answers below</div>
+  </div>
+
+  <!-- Keyboard (decorative) -->
+  <div class="keyboard">
+    <div class="key-row">
+      <div class="key red wide">RUN/STOP</div>
+      <div class="key">1</div><div class="key">2</div><div class="key">3</div>
+      <div class="key">4</div><div class="key">5</div><div class="key">6</div>
+      <div class="key">7</div><div class="key">8</div><div class="key">9</div>
+      <div class="key">0</div><div class="key">+</div><div class="key">-</div>
+      <div class="key">*</div><div class="key">/</div>
+      <div class="key blue wide">CLR/HOME</div>
+      <div class="key blue wide">INST/DEL</div>
+    </div>
+    <div class="key-row">
+      <div class="key dark wide">CTRL</div>
+      <div class="key">Q</div><div class="key">W</div><div class="key">E</div>
+      <div class="key">R</div><div class="key">T</div><div class="key">Y</div>
+      <div class="key">U</div><div class="key">I</div><div class="key">O</div>
+      <div class="key">P</div><div class="key">@</div><div class="key">*</div>
+      <div class="key">^</div>
+      <div class="key blue wider">RESTORE</div>
+    </div>
+    <div class="key-row">
+      <div class="key dark wide">RUN LCK</div>
+      <div class="key">A</div><div class="key">S</div><div class="key">D</div>
+      <div class="key">F</div><div class="key">G</div><div class="key">H</div>
+      <div class="key">J</div><div class="key">K</div><div class="key">L</div>
+      <div class="key">:</div><div class="key">;</div><div class="key">=</div>
+      <div class="key blue wider">RETURN</div>
+    </div>
+    <div class="key-row">
+      <div class="key dark wider">SHIFT</div>
+      <div class="key">Z</div><div class="key">X</div><div class="key">C</div>
+      <div class="key">V</div><div class="key">B</div><div class="key">N</div>
+      <div class="key">M</div><div class="key">,</div><div class="key">.</div>
+      <div class="key">/</div>
+      <div class="key dark wider">SHIFT</div>
+      <div class="key dark">^</div>
+      <div class="key dark">v</div>
+      <div class="key dark">&lt;</div>
+      <div class="key dark">&gt;</div>
+    </div>
+    <div class="key-row">
+      <div class="key dark wide">C=</div>
+      <div class="key space"></div>
+      <div class="key dark wide">F1</div>
+      <div class="key dark wide">F3</div>
+      <div class="key dark wide">F5</div>
+      <div class="key dark wide">F7</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// --- AUDIO ---
+var audioCtx = null;
+
+function getAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function beep(freq, startTime, duration, volume, type) {
+  var ctx = getAudio();
+  var osc = ctx.createOscillator();
+  var gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.type = type || 'square';
+  osc.frequency.setValueAtTime(freq, startTime);
+  gain.gain.setValueAtTime(volume || 0.15, startTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+  osc.start(startTime);
+  osc.stop(startTime + duration);
+}
+
+function playBootSound() {
+  var ctx = getAudio();
+  var t = ctx.currentTime + 0.05;
+  var notes = [130, 196, 261, 349, 523, 659, 784];
+  notes.forEach(function(freq, i) {
+    beep(freq, t + i * 0.07, 0.1, 0.12, 'square');
+  });
+  // final chord-ish flourish
+  beep(523, t + 0.56, 0.25, 0.10, 'square');
+  beep(659, t + 0.58, 0.22, 0.08, 'square');
+  beep(784, t + 0.60, 0.20, 0.07, 'square');
+}
+
+function playLoadSound() {
+  var ctx = getAudio();
+  var t = ctx.currentTime + 0.05;
+  // rapid data-loading trill
+  var freqs = [440,494,523,587,659,698,784,880,784,698,659,784,880,1047];
+  freqs.forEach(function(freq, i) {
+    beep(freq, t + i * 0.045, 0.06, 0.10, 'square');
+  });
+  // short confirmation beep at end
+  beep(1047, t + freqs.length * 0.045 + 0.05, 0.18, 0.12, 'square');
+}
+
+function playRunSound() {
+  var ctx = getAudio();
+  var t = ctx.currentTime + 0.05;
+  beep(261, t, 0.08, 0.12, 'square');
+  beep(523, t + 0.09, 0.08, 0.12, 'square');
+  beep(1047, t + 0.18, 0.15, 0.12, 'square');
+}
+var programCode = null;
+var inputQueue = [];
+var inputResolve = null;
+var running = false;
+
+// --- BOOT SEQUENCE ---
+var bootLines = [
+  "",
+  "    **** KCS BASIC 64 V2 ****",
+  "",
+  " 64K RAM SYSTEM  38911 BASIC BYTES FREE",
+  "",
+  "READY.",
+  ""
+];
+
+function boot() {
+  var screen = document.getElementById('screen');
+  screen.innerHTML = '';
+  var delay = 0;
+  bootLines.forEach(function(line) {
+    setTimeout(function() {
+      addBootLine(line);
+    }, delay);
+    delay += 60;
+  });
+  setTimeout(function() {
+    addIdleCursor();
+  }, delay + 100);
+}
+
+function addBootLine(text) {
+  var screen = document.getElementById('screen');
+  var div = document.createElement('div');
+  div.className = 'boot-line';
+  div.textContent = text;
+  screen.appendChild(div);
+  screen.scrollTop = screen.scrollHeight;
+}
+
+function addIdleCursor() {
+  var screen = document.getElementById('screen');
+  var div = document.createElement('div');
+  div.className = 'boot-line';
+  div.id = 'idle-cursor-line';
+  div.innerHTML = '<span class="cursor-blink"></span>';
+  screen.appendChild(div);
+}
+
+function removeIdleCursor() {
+  var el = document.getElementById('idle-cursor-line');
+  if (el) el.remove();
+}
+
+// --- FILE LOADING ---
+function loadFile(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    programCode = e.target.result;
+    playLoadSound();
+    document.getElementById('filename-display').textContent = file.name;
+    document.getElementById('run-btn').disabled = false;
+    removeIdleCursor();
+    var screen = document.getElementById('screen');
+    var div = document.createElement('div');
+    div.className = 'out-line';
+    div.textContent = 'LOAD "' + file.name.toUpperCase() + '"';
+    screen.appendChild(div);
+    var div2 = document.createElement('div');
+    div2.className = 'out-line';
+    div2.textContent = 'SEARCHING FOR ' + file.name.toUpperCase();
+    screen.appendChild(div2);
+    var div3 = document.createElement('div');
+    div3.className = 'out-line';
+    div3.textContent = 'LOADING';
+    screen.appendChild(div3);
+    var div4 = document.createElement('div');
+    div4.className = 'out-line';
+    div4.textContent = 'READY.';
+    screen.appendChild(div4);
+    var div5 = document.createElement('div');
+    div5.className = 'out-line';
+    div5.innerHTML = 'TYPE <strong style="color:#FFD060">RUN</strong> TO PLAY &mdash; PRESS THE GREEN BUTTON';
+    screen.appendChild(div5);
+    screen.scrollTop = screen.scrollHeight;
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// --- OUTPUT ---
+function printToScreen(text) {
+  var screen = document.getElementById('screen');
+  var lines = String(text).split('\n');
+  lines.forEach(function(line) {
+    var div = document.createElement('div');
+    div.className = 'out-line';
+    div.textContent = line;
+    screen.appendChild(div);
+  });
+  screen.scrollTop = screen.scrollHeight;
+}
+
+function printError(text) {
+  var screen = document.getElementById('screen');
+  var div = document.createElement('div');
+  div.className = 'out-line error-line';
+  div.textContent = '?? ERROR: ' + text;
+  screen.appendChild(div);
+  screen.scrollTop = screen.scrollHeight;
+}
+
+// --- INPUT HANDLING ---
+function requestInput(prompt) {
+  return new Promise(function(resolve) {
+    inputResolve = resolve;
+    var screen = document.getElementById('screen');
+    var row = document.createElement('div');
+    row.className = 'input-row';
+    row.id = 'active-input-row';
+
+    var promptSpan = document.createElement('span');
+    promptSpan.className = 'input-prompt';
+    promptSpan.textContent = prompt ? prompt : '> ';
+
+    var inp = document.createElement('input');
+    inp.type = 'text';
+    inp.className = 'screen-input';
+    inp.id = 'active-input';
+    inp.autocomplete = 'off';
+    inp.autocorrect = 'off';
+    inp.autocapitalize = 'off';
+    inp.spellcheck = false;
+
+    inp.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submitInput();
+      }
+    });
+
+    row.appendChild(promptSpan);
+    row.appendChild(inp);
+    screen.appendChild(row);
+    screen.scrollTop = screen.scrollHeight;
+    inp.focus();
+  });
+}
+
+function submitInput() {
+  var inp = document.getElementById('active-input');
+  var row = document.getElementById('active-input-row');
+  if (!inp || !inputResolve) return;
+  var val = inp.value;
+
+  // Replace the input row with a static line showing what was typed
+  var screen = document.getElementById('screen');
+  var staticLine = document.createElement('div');
+  staticLine.className = 'out-line';
+  staticLine.textContent = (inp.previousSibling ? inp.previousSibling.textContent : '> ') + val;
+  screen.replaceChild(staticLine, row);
+  screen.scrollTop = screen.scrollHeight;
+
+  var res = inputResolve;
+  inputResolve = null;
+  res(val);
+}
+
+// --- SKULPT SETUP ---
+function skulptOutput(text) {
+  printToScreen(text);
+}
+
+function skulptInput(prompt) {
+  return requestInput(prompt);
+}
+
+function builtinRead(x) {
+  if (Sk.builtinFiles === undefined || Sk.builtinFiles["files"][x] === undefined) {
+    throw "File not found: '" + x + "'";
+  }
+  return Sk.builtinFiles["files"][x];
+}
+
+// Patch time.sleep to use a JS delay instead of freezing
+function makeSleepModule() {
+  var mod = {};
+  mod.sleep = new Sk.builtin.func(function(secs) {
+    var ms = Sk.ffi.remapToJs(secs) * 1000;
+    return Sk.misceval.promiseToSuspension(
+      new Promise(function(resolve) {
+        setTimeout(resolve, ms);
+      })
+    );
+  });
+  return mod;
+}
+
+// --- RUN ---
+function runProgram() {
+  if (!programCode || running) return;
+  running = true;
+  removeIdleCursor();
+
+  var screen = document.getElementById('screen');
+  var divider = document.createElement('div');
+  divider.className = 'out-line';
+  divider.textContent = '------------------------------------------------';
+  screen.appendChild(divider);
+  var runLine = document.createElement('div');
+  runLine.className = 'out-line';
+  runLine.textContent = 'RUN';
+  screen.appendChild(runLine);
+
+  setStatus(true, 'Running...');
+  playRunSound();
+
+  Sk.configure({
+    output: skulptOutput,
+    read: builtinRead,
+    inputfun: skulptInput,
+    inputfunTakesPrompt: true,
+    __future__: Sk.python3,
+    execLimit: undefined,
+    timeoutMsg: function() { return 'Program timed out'; }
+  });
+
+  // Patch time module
+  Sk.sysmodules = Sk.sysmodules || new Sk.builtin.dict([]);
+  var timeMod = makeSleepModule();
+  Sk.sysmodules.mp$ass_subscript(new Sk.builtin.str('time'), timeMod);
+
+  var promise = Sk.misceval.asyncToPromise(function() {
+    return Sk.importMainWithBody('<stdin>', false, programCode, true);
+  });
+
+  promise.then(function() {
+    running = false;
+    setStatus(false, 'Program ended');
+    var div = document.createElement('div');
+    div.className = 'out-line';
+    div.textContent = '';
+    screen.appendChild(div);
+    var div2 = document.createElement('div');
+    div2.className = 'out-line';
+    div2.textContent = 'READY.';
+    screen.appendChild(div2);
+    addIdleCursor();
+    screen.scrollTop = screen.scrollHeight;
+  }, function(err) {
+    running = false;
+    setStatus(false, 'Error');
+    var msg = err.toString();
+    if (err.args && err.args.v && err.args.v[0]) {
+      msg = err.args.v[0].v || msg;
+    }
+    printError(msg);
+    var div = document.createElement('div');
+    div.className = 'out-line';
+    div.textContent = 'READY.';
+    screen.appendChild(div);
+    addIdleCursor();
+    screen.scrollTop = screen.scrollHeight;
+  });
+}
+
+// --- RESET ---
+function resetMachine() {
+  running = false;
+  inputResolve = null;
+  programCode = null;
+  document.getElementById('filename-display').textContent = '-- no program loaded --';
+  document.getElementById('run-btn').disabled = true;
+  setStatus(false, 'Ready');
+  boot();
+}
+
+// --- STATUS ---
+function setStatus(active, text) {
+  var dot = document.getElementById('status-dot');
+  var label = document.getElementById('status-text');
+  if (active) {
+    dot.classList.add('active');
+  } else {
+    dot.classList.remove('active');
+  }
+  label.textContent = text;
+}
+
+// --- INIT ---
+playBootSound();
+boot();
+</script>
+</body>
+</html>
