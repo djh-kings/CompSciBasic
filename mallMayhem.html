@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MALL MAYHEM -- Game Boy</title>
+<script src="./skulpt.min.js" type="text/javascript"></script>
+<script src="./skulpt-stdlib.js" type="text/javascript"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --gb-light:   #9BBC0F;  /* lightest - background */
+  --gb-mid1:    #8BAC0F;  /* light mid */
+  --gb-mid2:    #306230;  /* dark mid */
+  --gb-dark:    #0F380F;  /* darkest - text */
+  --body:       #C4C4B0;  /* gameboy plastic light */
+  --body-dark:  #A8A898;  /* gameboy plastic shadow */
+  --body-front: #BCBCAC;  /* front face */
+  --screen-bg:  #9BBC0F;
+  --purple:     #8B0067;  /* original DMG purple accent */
+  --dpad:       #222222;
+  --btn-a:      #8B0067;
+  --btn-b:      #8B0067;
+  --speaker:    #AAAAAA;
+}
+
+body {
+  background: #2A2A2A;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Courier New', Courier, monospace;
+  padding: 30px 16px;
+}
+
+/* =====================
+   GAME BOY SHELL
+   ===================== */
+.gameboy {
+  width: 340px;
+  position: relative;
+  filter: drop-shadow(0 20px 40px rgba(0,0,0,0.7));
+}
+
+/* --- TOP SECTION (screen area) --- */
+.gb-top {
+  background: linear-gradient(160deg, #CBCBBB 0%, #BCBCAC 40%, #AEAEA0 100%);
+  border-radius: 18px 18px 0 0;
+  padding: 24px 24px 0 24px;
+  position: relative;
+  box-shadow:
+    inset 0 2px 4px rgba(255,255,255,0.5),
+    inset 0 -2px 4px rgba(0,0,0,0.1);
+}
+
+/* cartridge slot top notch */
+.gb-top::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 8px;
+  background: #888880;
+  border-radius: 0 0 6px 6px;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* cartridge label sticking out */
+.cartridge {
+  position: absolute;
+  top: -32px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 72px;
+  height: 36px;
+  background: linear-gradient(180deg, #1A1A8A 0%, #0A0A6A 100%);
+  border-radius: 4px 4px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: 0 -2px 6px rgba(0,0,0,0.4);
+}
+
+.cart-title {
+  font-size: 6px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #FFD000;
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.cart-dev {
+  font-size: 5px;
+  letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.5);
+  text-transform: uppercase;
+}
+
+/* GAME BOY logo */
+.gb-logo {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.gb-logo-main {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  color: var(--purple);
+  text-transform: uppercase;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.gb-logo-dot {
+  width: 5px;
+  height: 5px;
+  background: var(--purple);
+  border-radius: 50%;
+}
+
+.gb-logo-tm {
+  font-size: 7px;
+  color: var(--purple);
+  vertical-align: super;
+}
+
+.gb-logo-nintendo {
+  font-size: 8px;
+  letter-spacing: 0.22em;
+  color: #888;
+  text-transform: uppercase;
+  margin-left: auto;
+}
+
+/* power LED */
+.power-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 6px;
+}
+
+.power-led {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #00CC00;
+  box-shadow: 0 0 6px #00FF00, 0 0 2px #00FF00;
+  animation: ledPulse 3s ease-in-out infinite;
+}
+
+@keyframes ledPulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+.power-label {
+  font-size: 7px;
+  letter-spacing: 0.14em;
+  color: #999;
+  text-transform: uppercase;
+}
+
+/* --- SCREEN BEZEL --- */
+.screen-bezel {
+  background: #222;
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 0;
+  box-shadow:
+    inset 0 4px 12px rgba(0,0,0,0.8),
+    inset 0 0 0 2px #111;
+}
+
+/* inner bezel lip */
+.screen-inner {
+  background: #1A1A1A;
+  border-radius: 4px;
+  padding: 3px;
+}
+
+.screen {
+  background: var(--screen-bg);
+  border-radius: 2px;
+  height: 320px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px 10px 6px;
+  scrollbar-width: none;
+  position: relative;
+}
+
+.screen::-webkit-scrollbar { display: none; }
+
+/* grid pixel overlay - subtle */
+.screen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(15,56,15,0.06) 3px,
+    rgba(15,56,15,0.06) 4px
+  );
+  pointer-events: none;
+}
+
+.out-line {
+  color: var(--gb-dark);
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.out-line.system-line {
+  color: var(--gb-mid2);
+  font-weight: bold;
+}
+
+.input-row {
+  display: flex;
+  align-items: center;
+}
+
+.input-prompt {
+  color: var(--gb-dark);
+  font-size: 12px;
+  font-family: 'Courier New', Courier, monospace;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.screen-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--gb-dark);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  flex: 1;
+  caret-color: var(--gb-dark);
+  padding: 0 2px;
+  width: 100%;
+}
+
+.cursor-blink {
+  display: inline-block;
+  width: 8px;
+  height: 12px;
+  background: var(--gb-dark);
+  vertical-align: middle;
+  animation: blink 1s step-end infinite;
+  margin-left: 1px;
+}
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* splash screen */
+.splash {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 8px;
+  padding: 10px;
+}
+
+.splash-title {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  color: var(--gb-dark);
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.splash-line {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--gb-mid2);
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.splash-press {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--gb-dark);
+  text-transform: uppercase;
+  animation: splashBlink 1s step-end infinite;
+  margin-top: 10px;
+}
+
+@keyframes splashBlink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+.splash-border {
+  width: 100%;
+  border-top: 2px solid var(--gb-dark);
+}
+
+/* --- MIDDLE SECTION (volume/battery) --- */
+.gb-mid {
+  background: linear-gradient(180deg, #BCBCAC 0%, #B0B0A0 100%);
+  padding: 8px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vol-slider {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.vol-label {
+  font-size: 6px;
+  letter-spacing: 0.12em;
+  color: #888;
+  text-transform: uppercase;
+}
+
+.vol-track {
+  width: 40px;
+  height: 8px;
+  background: #888;
+  border-radius: 4px;
+  position: relative;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.4);
+}
+
+.vol-thumb {
+  position: absolute;
+  left: 55%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 14px;
+  background: linear-gradient(180deg, #CCC 0%, #999 100%);
+  border-radius: 2px;
+  border: 1px solid #666;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.battery-label {
+  font-size: 6px;
+  letter-spacing: 0.12em;
+  color: #888;
+  text-transform: uppercase;
+  text-align: right;
+}
+
+/* --- BOTTOM SECTION (controls) --- */
+.gb-bottom {
+  background: linear-gradient(180deg, #B0B0A0 0%, #A8A898 60%, #989888 100%);
+  border-radius: 0 0 24px 24px;
+  padding: 14px 24px 28px;
+  position: relative;
+}
+
+/* diagonal cut on bottom corners - classic DMG shape */
+.gb-bottom::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  height: 40px;
+  background: #2A2A2A;
+  clip-path: polygon(0 100%, 100% 100%, 0 0);
+  border-radius: 0 0 0 24px;
+}
+
+.gb-bottom::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  background: #2A2A2A;
+  clip-path: polygon(100% 100%, 0 100%, 100% 0);
+  border-radius: 0 0 24px 0;
+}
+
+/* controls layout */
+.controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+/* D-PAD */
+.dpad {
+  width: 88px;
+  height: 88px;
+  position: relative;
+  justify-self: center;
+}
+
+.dpad-h {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 30px;
+  transform: translateY(-50%);
+  background: var(--dpad);
+  border-radius: 4px;
+  box-shadow: inset 0 2px 4px rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.4);
+}
+
+.dpad-v {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 30px;
+  transform: translateX(-50%);
+  background: var(--dpad);
+  border-radius: 4px;
+  box-shadow: inset 0 2px 4px rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.4);
+}
+
+.dpad-centre {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 30px;
+  height: 30px;
+  background: #333;
+  z-index: 1;
+}
+
+/* A/B buttons */
+.ab-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  justify-self: center;
+  transform: rotate(-20deg);
+}
+
+.ab-row {
+  display: flex;
+  gap: 14px;
+}
+
+.gb-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 11px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.8);
+  box-shadow: 0 3px 0 rgba(0,0,0,0.4), inset 0 2px 3px rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-a {
+  background: radial-gradient(circle at 40% 35%, #AA0077 0%, var(--btn-a) 100%);
+}
+
+.btn-b {
+  background: radial-gradient(circle at 40% 35%, #AA0077 0%, var(--btn-b) 100%);
+}
+
+.ab-label {
+  font-size: 7px;
+  letter-spacing: 0.16em;
+  color: #888;
+  text-transform: uppercase;
+  transform: rotate(20deg);
+  text-align: center;
+}
+
+/* START/SELECT */
+.start-select {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 4px;
+}
+
+.oval-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.oval-btn button {
+  width: 44px;
+  height: 14px;
+  border-radius: 7px;
+  border: none;
+  background: linear-gradient(180deg, #777 0%, #555 100%);
+  box-shadow: 0 2px 0 #333, inset 0 1px 2px rgba(255,255,255,0.2);
+  cursor: pointer;
+  transform: rotate(-20deg);
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+
+.oval-btn button:active {
+  transform: rotate(-20deg) translateY(2px);
+  box-shadow: 0 0 0 #333;
+}
+
+.oval-label {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #555;
+  text-transform: uppercase;
+}
+
+/* START button as the "coin insert" / game start */
+#start-btn-oval {
+  background: linear-gradient(180deg, #888 0%, #666 100%) !important;
+}
+
+/* speaker grille */
+.speaker {
+  position: absolute;
+  bottom: 20px;
+  right: 28px;
+  display: flex;
+  gap: 3px;
+  z-index: 1;
+}
+
+.speaker-hole {
+  width: 3px;
+  height: 24px;
+  background: #888;
+  border-radius: 2px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.4);
+}
+
+/* headphone jack */
+.headphone {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 10px;
+  height: 6px;
+  background: #555;
+  border-radius: 0 0 4px 4px;
+  z-index: 2;
+}
+
+/* insert coin flash on splash */
+.insert-coin-flash {
+  animation: splashBlink 1s step-end infinite;
+}
+</style>
+</head>
+<body>
+
+<div class="gameboy">
+
+  <!-- CARTRIDGE -->
+  <div class="cartridge">
+    <div class="cart-title">MALL<br>MAYHEM</div>
+    <div class="cart-dev">secretDev</div>
+  </div>
+
+  <!-- TOP SECTION -->
+  <div class="gb-top">
+    <div class="gb-logo">
+      <span class="gb-logo-main">Game Boy</span>
+      <span class="gb-logo-tm">TM</span>
+      <span class="gb-logo-nintendo">Nintendo</span>
+    </div>
+
+    <div class="power-row">
+      <div class="power-led"></div>
+      <span class="power-label">Power</span>
+    </div>
+
+    <div class="screen-bezel">
+      <div class="screen-inner">
+        <div class="screen" id="screen">
+          <div class="splash" id="splash">
+            <div class="splash-border"></div>
+            <div class="splash-title">MALL<br>MAYHEM</div>
+            <div class="splash-border"></div>
+            <div class="splash-line">A game by secretDev</div>
+            <div class="splash-line">KCS CompSci '26</div>
+            <div class="splash-border"></div>
+            <div class="splash-line">Rob. Gamble. Escape.</div>
+            <div class="splash-line">Don't get BUSTED.</div>
+            <div class="splash-press insert-coin-flash">-- PRESS START --</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MID STRIP -->
+  <div class="gb-mid">
+    <div class="vol-slider">
+      <div class="vol-label">Vol</div>
+      <div class="vol-track"><div class="vol-thumb"></div></div>
+    </div>
+    <div class="battery-label">DMG-01<br>Game Boy</div>
+  </div>
+
+  <!-- BOTTOM CONTROLS -->
+  <div class="gb-bottom">
+
+    <div class="controls">
+
+      <!-- D-PAD -->
+      <div class="dpad">
+        <div class="dpad-h"></div>
+        <div class="dpad-v"></div>
+        <div class="dpad-centre"></div>
+      </div>
+
+      <!-- A/B -->
+      <div class="ab-buttons">
+        <div class="ab-row">
+          <div class="gb-btn btn-b">B</div>
+          <div class="gb-btn btn-a">A</div>
+        </div>
+        <div class="ab-label">B &nbsp;&nbsp;&nbsp; A</div>
+      </div>
+
+      <!-- SELECT / START -->
+      <div class="start-select">
+        <div class="oval-btn">
+          <button id="start-btn-oval" onclick="startGame()"></button>
+          <div class="oval-label">Start</div>
+        </div>
+        <div class="oval-btn">
+          <button></button>
+          <div class="oval-label">Select</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- speaker -->
+    <div class="speaker">
+      <div class="speaker-hole"></div>
+      <div class="speaker-hole"></div>
+      <div class="speaker-hole"></div>
+      <div class="speaker-hole"></div>
+      <div class="speaker-hole"></div>
+      <div class="speaker-hole"></div>
+    </div>
+
+    <!-- headphone jack -->
+    <div class="headphone"></div>
+
+  </div>
+</div>
+
+<script>
+// --- STATE ---
+var GAME_CODE = null;
+var inputResolve = null;
+var running = false;
+
+// --- AUDIO ---
+var audioCtx = null;
+
+function getAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function beep(freq, startTime, duration, volume, type) {
+  var ctx = getAudio();
+  var osc = ctx.createOscillator();
+  var gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.type = type || 'square';
+  osc.frequency.setValueAtTime(freq, startTime);
+  gain.gain.setValueAtTime(volume || 0.10, startTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+  osc.start(startTime);
+  osc.stop(startTime + duration);
+}
+
+function playStartSound() {
+  var ctx = getAudio();
+  var t = ctx.currentTime + 0.05;
+  // Classic Game Boy boot-style ding
+  beep(784, t, 0.08, 0.12, 'square');
+  beep(987, t + 0.09, 0.08, 0.12, 'square');
+  beep(1175, t + 0.18, 0.08, 0.12, 'square');
+  beep(1568, t + 0.27, 0.30, 0.14, 'square');
+}
+
+function playGameOverSound() {
+  var ctx = getAudio();
+  var t = ctx.currentTime + 0.05;
+  var notes = [523, 466, 415, 370, 330, 294, 262];
+  notes.forEach(function(f, i) {
+    beep(f, t + i * 0.13, 0.16, 0.11, 'square');
+  });
+}
+
+// --- OUTPUT ---
+function printToScreen(text) {
+  var screen = document.getElementById('screen');
+  String(text).split('\n').forEach(function(line) {
+    var div = document.createElement('div');
+    div.className = 'out-line';
+    div.textContent = line;
+    screen.appendChild(div);
+  });
+  screen.scrollTop = screen.scrollHeight;
+}
+
+function printSystem(text) {
+  var screen = document.getElementById('screen');
+  var div = document.createElement('div');
+  div.className = 'out-line system-line';
+  div.textContent = text;
+  screen.appendChild(div);
+  screen.scrollTop = screen.scrollHeight;
+}
+
+// --- INPUT ---
+function requestInput(prompt) {
+  return new Promise(function(resolve) {
+    inputResolve = resolve;
+    var screen = document.getElementById('screen');
+    var row = document.createElement('div');
+    row.className = 'input-row';
+    row.id = 'active-input-row';
+
+    var promptSpan = document.createElement('span');
+    promptSpan.className = 'input-prompt';
+    promptSpan.textContent = prompt || '> ';
+
+    var inp = document.createElement('input');
+    inp.type = 'text';
+    inp.className = 'screen-input';
+    inp.id = 'active-input';
+    inp.autocomplete = 'off';
+    inp.autocorrect = 'off';
+    inp.autocapitalize = 'off';
+    inp.spellcheck = false;
+
+    inp.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); submitInput(); }
+    });
+
+    row.appendChild(promptSpan);
+    row.appendChild(inp);
+    screen.appendChild(row);
+    screen.scrollTop = screen.scrollHeight;
+    inp.focus();
+  });
+}
+
+function submitInput() {
+  var inp = document.getElementById('active-input');
+  var row = document.getElementById('active-input-row');
+  if (!inp || !inputResolve) return;
+  var val = inp.value;
+  var screen = document.getElementById('screen');
+  var staticLine = document.createElement('div');
+  staticLine.className = 'out-line';
+  staticLine.textContent = (inp.previousSibling ? inp.previousSibling.textContent : '> ') + val;
+  screen.replaceChild(staticLine, row);
+  screen.scrollTop = screen.scrollHeight;
+  var res = inputResolve;
+  inputResolve = null;
+  res(val);
+}
+
+// --- SKULPT ---
+function builtinRead(x) {
+  if (Sk.builtinFiles === undefined || Sk.builtinFiles["files"][x] === undefined) {
+    throw "File not found: '" + x + "'";
+  }
+  return Sk.builtinFiles["files"][x];
+}
+
+function makeSleepModule() {
+  var mod = {};
+  mod.sleep = new Sk.builtin.func(function(secs) {
+    var ms = Sk.ffi.remapToJs(secs) * 1000;
+    return Sk.misceval.promiseToSuspension(
+      new Promise(function(resolve) { setTimeout(resolve, ms); })
+    );
+  });
+  return mod;
+}
+
+// --- START ---
+function startGame() {
+  if (running) return;
+  running = true;
+
+  document.getElementById('start-btn-oval').disabled = true;
+
+  fetch('./mall_mayhem.py')
+    .then(function(response) {
+      if (!response.ok) throw new Error('Could not load mall_mayhem.py');
+      return response.text();
+    })
+    .then(function(code) {
+      GAME_CODE = code;
+      var screen = document.getElementById('screen');
+      screen.innerHTML = '';
+      playStartSound();
+      setTimeout(function() { bootSequence(runGame); }, 600);
+    })
+    .catch(function(err) {
+      running = false;
+      document.getElementById('start-btn-oval').disabled = false;
+      var screen = document.getElementById('screen');
+      screen.innerHTML = '';
+      printSystem('LOAD ERROR');
+      printSystem(err.message);
+      printSystem('Check mall_mayhem.py');
+      printSystem('is in the same folder.');
+    });
+}
+
+var bootLines = [
+  'MALL MAYHEM',
+  '(C) KCS COMPSCI 2025',
+  '',
+  'LOADING...',
+  ''
+];
+
+function bootSequence(callback) {
+  var screen = document.getElementById('screen');
+  var i = 0;
+  function next() {
+    if (i >= bootLines.length) { setTimeout(callback, 200); return; }
+    var div = document.createElement('div');
+    div.className = 'out-line system-line';
+    div.textContent = bootLines[i];
+    screen.appendChild(div);
+    screen.scrollTop = screen.scrollHeight;
+    i++;
+    setTimeout(next, 100);
+  }
+  next();
+}
+
+function runGame() {
+  Sk.configure({
+    output: printToScreen,
+    read: builtinRead,
+    inputfun: requestInput,
+    inputfunTakesPrompt: true,
+    __future__: Sk.python3,
+    execLimit: undefined
+  });
+
+  Sk.sysmodules = Sk.sysmodules || new Sk.builtin.dict([]);
+  Sk.sysmodules.mp$ass_subscript(new Sk.builtin.str('time'), makeSleepModule());
+
+  Sk.misceval.asyncToPromise(function() {
+    return Sk.importMainWithBody('<stdin>', false, GAME_CODE, true);
+  }).then(function() {
+    running = false;
+    playGameOverSound();
+    printSystem('');
+    printSystem('GAME OVER');
+    printSystem('Reload to play again.');
+    document.getElementById('start-btn-oval').disabled = false;
+  }, function(err) {
+    running = false;
+    var msg = (err.args && err.args.v && err.args.v[0]) ? (err.args.v[0].v || err.toString()) : err.toString();
+    printSystem('ERROR: ' + msg);
+    document.getElementById('start-btn-oval').disabled = false;
+  });
+}
+</script>
+</body>
+</html>
