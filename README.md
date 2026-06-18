@@ -1,1 +1,1 @@
-# CompSciBasic
+# KCS CompSciBasic V0.2
